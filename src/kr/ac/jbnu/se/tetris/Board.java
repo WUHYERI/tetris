@@ -14,9 +14,14 @@ import javax.swing.Timer;
 
 public class Board extends JPanel implements ActionListener {
 
-	final int BoardWidth = 10;
-	final int BoardHeight = 22;
+	private HeavyBlock heavyBlock;
+	private int heavyBlockCount;
+	private static final int HEAVY_BLOCK_DELAY = 30;
+	private int heavyBlockCurrentRow;
+	final int BoardWidth = 13;
+	final int BoardHeight = 26;
 
+	private Timer heavyBlockTimer;
 	Timer timer;
 	boolean isFallingFinished = false;
 	boolean isStarted = false;
@@ -30,6 +35,9 @@ public class Board extends JPanel implements ActionListener {
 
 	public Board(Tetris parent) {
 
+		heavyBlock = new HeavyBlock();
+		heavyBlockCount = 50;
+
 		setFocusable(true);
 		curPiece = new Shape();
 		timer = new Timer(400, this);
@@ -39,15 +47,19 @@ public class Board extends JPanel implements ActionListener {
 		board = new Tetrominoes[BoardWidth * BoardHeight];
 		addKeyListener(new TAdapter());
 		clearBoard();
+
 	}
+
+
 
 	public void actionPerformed(ActionEvent e) {
 		if (isFallingFinished) {
+
 			isFallingFinished = false;
-			newPiece();
-		} else {
-			oneLineDown();
+
+
 		}
+			oneLineDown();
 	}
 
 	int squareWidth() {
@@ -72,6 +84,7 @@ public class Board extends JPanel implements ActionListener {
 		clearBoard();
 
 		newPiece();
+
 		timer.start();
 	}
 
@@ -85,6 +98,7 @@ public class Board extends JPanel implements ActionListener {
 			statusbar.setText("paused");
 		} else {
 			timer.start();
+			heavyBlockTimer.start();
 			statusbar.setText(String.valueOf(numLinesRemoved));
 		}
 		repaint();
@@ -95,6 +109,11 @@ public class Board extends JPanel implements ActionListener {
 
 		Dimension size = getSize();
 		int boardTop = (int) size.getHeight() - BoardHeight * squareHeight();
+
+		//보드에서 블럭 떨어지는 곳 바운더리 선
+		g.setColor(Color.BLACK);
+		g.drawRect(0, boardTop, BoardWidth * squareWidth(), BoardHeight * squareHeight());
+
 
 		for (int i = 0; i < BoardHeight; ++i) {
 			for (int j = 0; j < BoardWidth; ++j) {
@@ -141,10 +160,18 @@ public class Board extends JPanel implements ActionListener {
 			board[(y * BoardWidth) + x] = curPiece.getShape();
 		}
 
-		removeFullLines();
+		if(curPiece.getShape() != Tetrominoes.HeavyBlockShape){
+			removeFullLines();
+		} else if (curPiece.getShape() == Tetrominoes.HeavyBlockShape) {
+			HeavyBlockDown();
+			removeFullLines();
+		}
+
 
 		if (!isFallingFinished)
 			newPiece();
+			System.out.println("pieceDroped newPiece");
+
 	}
 
 	private void newPiece() {
@@ -168,6 +195,7 @@ public class Board extends JPanel implements ActionListener {
 				return false;
 			if (shapeAt(x, y) != Tetrominoes.NoShape)
 				return false;
+
 		}
 
 		curPiece = newPiece;
@@ -175,6 +203,7 @@ public class Board extends JPanel implements ActionListener {
 		curY = newY;
 		repaint();
 		return true;
+
 	}
 
 	private void removeFullLines() {
@@ -211,7 +240,7 @@ public class Board extends JPanel implements ActionListener {
 	private void drawSquare(Graphics g, int x, int y, Tetrominoes shape) {
 		Color colors[] = { new Color(0, 0, 0), new Color(204, 102, 102), new Color(102, 204, 102),
 				new Color(102, 102, 204), new Color(204, 204, 102), new Color(204, 102, 204), new Color(102, 204, 204),
-				new Color(218, 170, 0) };
+				new Color(218, 170, 0), new Color(0,0, 0) };
 
 		Color color = colors[shape.ordinal()];
 
@@ -266,8 +295,70 @@ public class Board extends JPanel implements ActionListener {
 			case 'D':
 				oneLineDown();
 				break;
+			case '1' :
+				restoredHeavyBlock();
+				break;
 			}
 
 		}
 	}
+
+	private void restoredHeavyBlock() {
+
+		if (heavyBlockCount > 0 ) {
+
+			curPiece.setShape(Tetrominoes.HeavyBlockShape);
+			heavyBlockCount--;
+
+			curX = BoardWidth / 2;
+			curY = BoardHeight - 1 - curPiece.minY();
+			System.out.println("call heavyBlock");
+
+		}
+
+
+	}
+
+
+	// 헤비 블록 이동 시작
+	private void HeavyBlockDown() {
+		heavyBlockCurrentRow = BoardHeight - 1;
+		heavyBlockTimer = new Timer(HEAVY_BLOCK_DELAY, new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if (heavyBlockCurrentRow > 0) {
+					heavyBlockDownStep(heavyBlockCurrentRow);
+					heavyBlockCurrentRow--;
+				} else {
+					((Timer) e.getSource()).stop();
+					isFallingFinished = true;
+				}
+			}
+		});
+		heavyBlockTimer.start();
+		timer.start();
+
+	}
+
+	// 헤비 블록 한 단계 아래로 이동
+	private void heavyBlockDownStep(int currentRow) {
+		System.out.println("2");
+		for (int j = 0; j < BoardWidth; ++j) {
+			System.out.println("2. for문");
+			if (shapeAt(j, currentRow) == Tetrominoes.HeavyBlockShape) {
+				// 현재 위치의 헤비 블록을 제거합니다.
+				board[(currentRow * BoardWidth) + j] = Tetrominoes.NoShape;
+				repaint();
+
+				// 헤비 블록을 아래로 이동합니다.
+				int newRow = currentRow - 1;
+				if (newRow >= 0) {
+					board[(newRow * BoardWidth) + j] = Tetrominoes.HeavyBlockShape;
+				}
+			}
+		}
+		repaint();
+	}
+
+
+
 }
