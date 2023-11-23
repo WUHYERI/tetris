@@ -104,6 +104,7 @@ public class Board extends JPanel implements ActionListener {
 		repaint();
 	}
 
+
 	public void paint(Graphics g) {
 		super.paint(g);
 
@@ -113,6 +114,7 @@ public class Board extends JPanel implements ActionListener {
 		//보드에서 블럭 떨어지는 곳 바운더리 선
 		g.setColor(Color.BLACK);
 		g.drawRect(0, boardTop, BoardWidth * squareWidth(), BoardHeight * squareHeight());
+
 
 
 		for (int i = 0; i < BoardHeight; ++i) {
